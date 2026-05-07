@@ -4,26 +4,34 @@ on:
   push:
     branches: [main]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      packages: write
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Build backend
-        run: docker build -t ghcr.io/yourname/backend:latest ./src/backend
+        run: docker build -t ghcr.io/${{ github.repository_owner }}/backend:latest ./src/backend
 
       - name: Build frontend
-        run: docker build -t ghcr.io/yourname/frontend:latest ./src/frontend
+        run: docker build -t ghcr.io/${{ github.repository_owner }}/frontend:latest ./src/frontend
 
       - name: Push images
         run: |
-          docker push ghcr.io/yourname/backend:latest
-          docker push ghcr.io/yourname/frontend:latest
+          docker push ghcr.io/${{ github.repository_owner }}/backend:latest
+          docker push ghcr.io/${{ github.repository_owner }}/frontend:latest
 
       - name: Set kubeconfig
         run: |
@@ -31,5 +39,4 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
 
       - name: Deploy
-        run: |
-          kubectl apply -f k8s/
+        run: kubectl apply -f k8s/
