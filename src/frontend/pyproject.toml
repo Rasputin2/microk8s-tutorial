@@ -1,0 +1,11 @@
+[project]
+name = "frontend"
+version = "0.1.0"
+dependencies = [
+    "streamlit",
+    "requests"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build
