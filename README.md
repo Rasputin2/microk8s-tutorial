@@ -1,9 +1,61 @@
-# test-my-cluster-site
-This is just a simple site to test out a self created Kubernetes cluster.
+# Table of Contents
 
-John McDonald (US)
-Mon, May 4, 6:50 PM (2 days ago)
-to me
+- [Local_Development](#local_development)
+- [Deployment](#deployment)
+- [File_Structure](#file_structure)
+
+# Local_Development
+
+## Step One: Ensure you have installed uv
+
+### Windows
+
+```powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"```
+
+### Linux
+
+```curl -LsSf https://astral.sh/uv/install.sh | sh```
+
+## Step Two: Create venv
+
+```uv venv```
+
+## Step Three: Activate venv
+
+### Windows (if using powershell)
+
+```.\.venv\Scripts\Activate.ps1```
+
+### Linux
+
+```source .venv/bin/activate```
+
+## Step Four: Install Packages
+
+```uv sync```
+
+## Step Five: Run Backend and Frontend
+
+You must start the docker daemon before running these commands:
+
+```docker compose up``` 
+
+OR
+
+```docker compose up --build --force-recreate``` if you change the image
+
+# Deployment to GitHub Actions
+
+
+
+# File_Structure
+
+The file structure is set up as a single workspace with two build units each consisting of one package. 
+
+Workspace 
+└── Build Unit (Project / Distribution)
+    └── Package
+        └── Module
 
 my-project/
 
@@ -13,15 +65,19 @@ my-project/
 
 │   │   ├── app/
 
+|   |   |   └── __init__.py
+
 │   │   │   └── main.py
 
 │   │   ├── Dockerfile
 
-│   │   └── pyproject.toml
+│   │   └── pyproject.toml  # Sits at Build Unit Level
 
 │   ├── frontend/
 
 │   │   ├── app/
+
+│   │   │   └── __init__.py
 
 │   │   │   └── main.py
 
