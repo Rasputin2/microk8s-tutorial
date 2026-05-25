@@ -3,7 +3,7 @@ name: CI/CD
 on:
   push:
     branches: [main]
-    # Prevents Infinite Loop Because Argo Changes the Yamls
+    # Prevents Infinite Loop Because Argo Changes the backend and frontend yamls
     paths-ignore:  
       - 'microk8s/backend.yaml'
       - 'microk8s/frontend.yaml'
@@ -70,5 +70,5 @@ jobs:
           git add microk8s/backend.yaml microk8s/frontend.yaml
 
           git commit -m "Update image tags to ${GITHUB_SHA}" || exit 0
-
+  
           git push
