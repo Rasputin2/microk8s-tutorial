@@ -3,9 +3,10 @@ name: CI/CD
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - 'backend.yaml'
-      - 'frontend.yaml'
+    # Prevents Infinite Loop Because Argo Changes the Yamls
+    paths-ignore:  
+      - 'microk8s/backend.yaml'
+      - 'microk8s/frontend.yaml'
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -23,11 +24,9 @@ jobs:
         uses: actions/checkout@v4
 
       # Add ARM emulation support
-      # Add ARM emulation support
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
-      # Add the multi-architecture builder
       # Add the multi-architecture builder
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -39,7 +38,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Combines build and push for backend into one step targeting ARM64
       # Combines build and push for backend into one step targeting ARM64
       - name: Build and Push Backend
         uses: docker/build-push-action@v5
@@ -60,16 +58,16 @@ jobs:
 
       - name: Update Kubernetes manifests
         run: |
-          sed -i "s|image: ghcr.io/rasputin2/backend:.*|image: ghcr.io/rasputin2/backend:${GITHUB_SHA}|" backend.yaml
+          sed -i "s|image: ghcr.io/rasputin2/backend:.*|image: ghcr.io/rasputin2/backend:${GITHUB_SHA}|" microk8s/backend.yaml
 
-          sed -i "s|image: ghcr.io/rasputin2/frontend:.*|image: ghcr.io/rasputin2/frontend:${GITHUB_SHA}|" frontend.yaml
+          sed -i "s|image: ghcr.io/rasputin2/frontend:.*|image: ghcr.io/rasputin2/frontend:${GITHUB_SHA}|" microk8s/frontend.yaml
 
       - name: Commit updated manifests
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
 
-          git add backend.yaml frontend.yaml
+          git add microk8s/backend.yaml microk8s/frontend.yaml
 
           git commit -m "Update image tags to ${GITHUB_SHA}" || exit 0
 
