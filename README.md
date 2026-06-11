@@ -6,6 +6,7 @@
 - [Local_Development](#local_development)
 - [Deployment](#deployment)
 - [Networking](#networking)
+- [Starting_Over](#starting_over)
 
 
 # Intro
@@ -18,7 +19,10 @@ Layer 3: Networking Layer ("packets")
 Layer 2: Link Layer ("frames" over ethernet or wireless "links" identified with MAC addresses resolved by ARP)
 Layer 1: Physical layer ("bits" over copper wire/wireless) 
 
-So if I refer to Link layer you know what I mean. 
+So if I refer to Link layer you know what I mean. Attached below are diagrams depicting how a Dataframe moves and a Packet:
+
+![alt](pictures/DATAFRAME_DIAGRAM.png)
+![alt text](pictures/PACKET_DIAGRAM.png)
 
 # File_Structure
 
@@ -48,7 +52,8 @@ src
             main.py
             __init__.py
 tests
-docker-compos.yaml
+pictures
+docker-compose.yaml
 pyproject.toml
 README.md
 -------------------------
@@ -166,11 +171,11 @@ OR
 
 # Deployment
 
-Thus far, we have a very simple web application.  It is not running in a cloud environment.  It is not accessible on our home local area network (LAN).  It definitely is not accessible via the Internet.   
+Thus far, we have a very simple web application and that is fine so long as all you want to do is run it on your local computer and only users of the PC you are on can access it.  It is not available to the wider world.  It is not running in a cloud environment.  It is not even accessible on our home local area network (LAN).  It definitely is not accessible via the Internet. What we're going to do next is try and deploy this onto our Pis.  
 
 ## Preparing_the_Pis
 
-We are going to use two (2) Raspberry Pis as two different servers to create a small "cloud" infrastructure.  I used two Rastech Raspberry Pis with 64 bit ARM Cortex A76 processors with the Ubuntu server distro of Linux installed with the Ubuntu distro.  You can try other setups but various files would have to be changed in the tutorial.  I also suggest that if you are connecting to your home network via ethernet you get an ethernet switch so that you can plug both Raspberry Pis + your laptop into the switch at the same time and plug the switch into your ethernet jack.  I am assuming you have read the instructions to set up the Pis and you have two running Pis connected to your local area network.  You need to mentally choose one to be your "Master" and the other as "Worker".  Keep them separate and identify them (by hostname or by a sticky or whatever works for you).  We'll formalize this distinction in a moment. You need to have two Pis with the Ubuntu server (not client) version of Linux installed before proceeding. 
+We are going to use two (2) Raspberry Pis as two different servers to create a small "cloud" infrastructure.  I used two Rastech Raspberry Pis with 64 bit ARM Cortex A76 processors with the Ubuntu server distro (Ubuntu is 'a' distro of Linux) of Linux installed.  You can try other setups but various files would have to be changed in the tutorial.  I also suggest that if you are connecting to your home network via ethernet you get an ethernet switch so that you can plug both Raspberry Pis + your laptop into the switch at the same time and plug the switch into your ethernet jack.  I am assuming you have read the instructions to set up the Pis and you have two running Pis connected to your local area network.  You need to mentally choose one to be your "Master" and the other as "Worker".  Keep them separate and identify them (by hostname or by a sticky or whatever works for you).  We'll formalize this distinction in a moment. You need to have two Pis with the Ubuntu ***server*** (not client) version of Linux installed on each Pi before proceeding. 
 
 ### Assign Static IP Addresses to Each Pi
 
@@ -292,7 +297,7 @@ Storage Objects:
 
 Hopefully this occurred without a hitch.  If not, you need to debug.  Now check the status:
 
-```sudo microk8s status```
+```sudo microk8s status --wait-ready```
 
 The status command gives you an overview of what features are enabled and disabled.  Look specifically at:
 
@@ -307,7 +312,7 @@ To make sure we have what we need, run these commands (its possible some of thes
 
 Wait for a couple of minutes and then run the status command again and ensure everything is up and running.  
 
-**comment:** There is a key idea here to spend a little time understanding.  "add-ons" are cluster-wide resources.  So anything that shows up here will automatically be available on Servant once we join your Servant Raspberry Pi to the cluster controlled by Master via the Control Plane. 
+**comment:** There is a key idea here to spend a little time understanding.  These "add-ons" are cluster-wide resources.  So anything that shows up here will automatically be available on Servant once we join your Servant Raspberry Pi to the cluster controlled by Master via the Control Plane. 
 
 The above doesn't show you ***how*** those features are enabled (i.e., as pods, svcs, both).  So to see that run: 
 
@@ -321,6 +326,14 @@ You should only see one (1) node at this point and the label (which may be long)
 
 #### Install microk8s on our **Servant**:
 
+This is the same process as the above steps for **Master**.
+
+```sudo snap install microk8s --classic```
+```sudo microk8s status --wait-ready```
+```sudo microk8s enable dns``` # May not be needed if already enabled
+```sudo microk8s enable hostpath-storage``` # May not be needed if already enabled
+```sudo microk8s enable ingress``` # May not be needed if already enabled
+
 Run this command on **Master** not **Servant**:
 
 ```sudo microk8s add-node```
@@ -329,7 +342,7 @@ The output should reveal a token which should look something like this (note its
 
 On your **Servant** not **Master** run:
 
-```sudo microk8s join <replace this with your token>```
+```sudo microk8s join <replace this with your token> --worker```
 
 Now assuming you didn't receive any errors there, go back to your **Master** and run:
 
@@ -480,4 +493,36 @@ Now that the NAT has translated the destination to be 192.168.1.10, the Routing 
 
 ### Getting from the LAN to a Pod on the Cluster
 
-![alt text](LAN_DIAGRAM.png)
+![alt text](pictures/LAN_DIAGRAM.png)
+
+# Starting_Over
+
+You may find during this project that something went very wrong or you may just decide to tear everything down at one point and start over just as a learning exercise.  If you do so, it's important to tear things down in the right order.  To shut things down properly:
+
+- Remove your servant node from the cluster
+
+```sudo microk8s leave```
+
+- Then remove the snap package and associated resources from the servant
+
+```sudo microk8s reset --destroy-storage```
+```sudo snap remove --purge microk8s```
+```sudo rm -rf /var/snap/microk8s```
+```rm -rf ~/snap/microk8s```
+
+- Assuming you did this for every worker node, you shouldn't see them joined anymore on the master but verify:
+
+```sudo microk8s kubectl get nodes```
+
+if any nodes still appear, remove them:
+
+```sudo microk8s remove-node <node-name>```
+
+- On Master, reset microk8s and purge storage
+
+```sudo microk8s reset --destroy-storage```
+```sudo snap remove --purge microk8s```
+```sudo rm -rf /var/snap/microk8s```
+```rm -rf ~/snap/microk8s```
+
+
