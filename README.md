@@ -216,35 +216,37 @@ network:
   version: 2
   renderer: networkd
 
-  ethernets:
+  ethernets:                      # OPTION A: FOR ETHERNET
     eth0:
       dhcp4: false
+      dhcp6: false
       addresses:
         - 192.168.1.10/24
       routes:
-        - to: 0.0.0.0/0
+        - to: default
           via: 192.168.1.1
-          metric: 200
       nameservers:
         addresses:
           - 1.1.1.1
           - 8.8.8.8
-  wifis:
+  wifis:                           # OPTION B: FOR WIFI           
     wlan0:
       dhcp4: false
+      dhcp6: falselaidlaw
       addresses:
         - 192.168.1.11/24
       access-points:
         <YOUR_WIFI_SSID>:
           password: <YOUR_WIFI_PASSWORD>
       routes:
-        - to: 0.0.0.0/0
+        - to: default
           via: 192.168.1.1
-          metric: 100
       nameservers:
         addresses:
           - 1.1.1.1
           - 8.8.8.8
+
+**comment:** to minimize complexity, I'd recommend using EITHER ethernet on eth0 OR wifi on wlan0. If you just choose one, just delete the verbiage associated with either ethernets or wifis.  
 
 This assumes your default gateway is 192.168.1.1 (you need to check).  It also assumes you chose the same static IP address that I did.  It further assumes you have the Pi connected via ethernet AND wifi.  If you don't use wifi you can delete wifis: and everything below it.  If you don't have ethernet, you can delete the section associated with ethernets. The reference to nameservers are DNS servers provisioned by Cloudflare (1.1.1.1) and Google (8.8.8.8) which are used to resolve domain names (i.e., www.google.com) into actual IPv4 or IPv6 addresses.  We'll dive into that more once we expose our Hello World! app to the wider internet. 
 
