@@ -218,8 +218,17 @@ We need to start systemd-networkd on **Master**:
 
 ```sudo systemctl start systemd-networkd```
 
-To perform the next steps, you will need to navigate to the root (/) of Ubuntu on Master and find the cloud-init.yaml in your /etc/netplan/ folder on Master.  You need to amend it (using a text editor, ```sudo vi <insert file name>``` or ```sudo nano <insert file name>```) to look like this:
+To perform the next steps, you will need to navigate to the root (/) of Ubuntu on Master and find the cloud-init.yaml in your /etc/netplan/ folder on Master.  You need to amend it using a text editor: 
 
+```sudo vi <insert file name>``` 
+
+or 
+
+```sudo nano <insert file name>``` 
+
+to look like this:
+
+```
 network:
   version: 2
   renderer: networkd
@@ -253,7 +262,7 @@ network:
         addresses:
           - 1.1.1.1
           - 8.8.8.8
-
+```
 **comment:** to minimize complexity, I'd recommend using EITHER ethernet on eth0 OR wifi on wlan0. If you just choose one, just delete the verbiage associated with either ethernets or wifis.  
 
 This assumes your default gateway is 192.168.1.1 (you need to check).  It also assumes you chose the same static IP address that I did.  It further assumes you have the Pi connected via ethernet AND wifi.  If you don't use wifi you can delete wifis: and everything below it.  If you don't have ethernet, you can delete the section associated with ethernets. The reference to nameservers are DNS servers provisioned by Cloudflare (1.1.1.1) and Google (8.8.8.8) which are used to resolve domain names (i.e., www.google.com) into actual IPv4 or IPv6 addresses.  We'll dive into that more once we expose our Hello World! app to the wider internet. 
@@ -274,6 +283,7 @@ A deep dive on container orchestration is beyond the scope of this tutorial.  Fo
 
 At the risk of overloading you with information, there are lots of other Object types in K8s, but I will only list the ones relevant to this project:
 
+```
 Core Workload Objects:
   Pod (mentioned above)
   Deployment - A workflow that spins up one or more pods based on certain considerations
@@ -292,6 +302,7 @@ Configuration Objects:
 Storage Objects:
   Persistent Volume
   Persistent Volume Claim
+```
 
 #### Install microk8s on our **Master**:
 
