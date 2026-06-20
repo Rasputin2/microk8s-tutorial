@@ -29,33 +29,36 @@ So if I refer to Link layer you know what I mean. Attached below are diagrams de
 The file structure is set up as a single workspace with two build units each consisting of one package. 
 
 ------------------------
-microk8s
-│   argo-cd.yaml
-│   backend.yaml
-│   frontend.yaml
-│   ingress.yaml
-│   namespace.yaml
-src
-├───backend
-│   │   Dockerfile
-│   │   pyproject.toml
-│   │   
-│   └───app
-│          main.py
-│          __init__.py
-│               
-└───frontend
-    │   Dockerfile
-    │   pyproject.toml
-    │   
-    └───app
-            main.py
-            __init__.py
-tests
-pictures
-docker-compose.yaml
-pyproject.toml
-README.md
+```text
+.
+├── microk8s
+│   ├── argo-cd.yaml
+│   ├── backend.yaml
+│   ├── frontend.yaml
+│   ├── ingress.yaml
+│   └── namespace.yaml
+│
+├── src
+│   ├── backend
+│   │   ├── Dockerfile
+│   │   ├── pyproject.toml
+│   │   └── app
+│   │       ├── main.py
+│   │       └── __init__.py
+│   │
+│   └── frontend
+│       ├── Dockerfile
+│       ├── pyproject.toml
+│       └── app
+│           ├── main.py
+│           └── __init__.py
+│
+├── tests
+├── pictures
+├── docker-compose.yaml
+├── pyproject.toml
+└── README.md
+```
 -------------------------
 
 # Definitions
@@ -292,7 +295,7 @@ Storage Objects:
 
 #### Install microk8s on our **Master**:
 
-```sudo apt update``
+```sudo apt update```
 ```sudo snap install microk8s --classic```
 
 Hopefully this occurred without a hitch.  If not, you need to debug.  Now check the status:
@@ -328,11 +331,13 @@ You should only see one (1) node at this point and the label (which may be long)
 
 This is the same process as the above steps for **Master**.
 
-```sudo snap install microk8s --classic```
-```sudo microk8s status --wait-ready```
-```sudo microk8s enable dns``` # May not be needed if already enabled
-```sudo microk8s enable hostpath-storage``` # May not be needed if already enabled
-```sudo microk8s enable ingress``` # May not be needed if already enabled
+```
+sudo snap install microk8s --classic
+sudo microk8s status --wait-ready
+sudo microk8s enable dns # May not be needed if already enabled
+sudo microk8s enable hostpath-storage # May not be needed if already enabled
+sudo microk8s enable ingress # May not be needed if already enabled
+``` 
 
 Run this command on **Master** not **Servant**:
 
@@ -370,7 +375,8 @@ Now, **don't** do this, but I want to point out that you could, if you wanted, o
 ## Continuous Deployment
 
 To facilitate automated CD operations, we need to accomplish a number of tasks.  Before explaining that we need to focus on what exactly a container is and how are python build units (backend and frontend) are going to be dealt with on each Pi.  To do that, let's compare to a situation where we have two "virtual machines" running on one physical piece of hardware.  The diagram would look like this:
-
+```
+.
 Pi Hardware
 │
 └── Hypervisor (Virtualization Layer)
@@ -384,9 +390,10 @@ Pi Hardware
         ├── Kernel
         ├── OS
         └── App
-
+```
 That is not what we are doing with this project.  If we did, each VM could conceivably be its own node.  In our setup, each piece of bare metal is its own k8s node.  This is our setup (assuming one Pi here for the moment):
-
+```
+.
 Pi Hardware
 │
 └── Linux Kernel
@@ -398,7 +405,7 @@ Pi Hardware
     └── Container B
         ├── Python
         └── Frontend
-
+```
 The way Linux creates/builds these is with a container runtime called containerd.  Containerd is running on your Pis right now (or should be).  You can see it if you run this command on either Pi:
 
 ```sudo snap services microk8s```
@@ -419,26 +426,34 @@ Now, whenever we change the main branch in our repo, this CI pipeline should aut
 
 **comment:** argo relies on helm as a dependency which is why we enabled helm early on (see above).
 
+To install argocd with minimal issues we are going to use helm (which we enabled earlier).
+
+```sudo snap install helm --classic```
+```sudo microk8s helm3 repo add argo https://argproj.github.io/argo-helm```
+```sudo microk8s helm3 repo update```
 ```sudo microk8s kubectl create namespace argocd```
-```sudo microk8s kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml```
+```sudo microk8s helm3 install argocd argo/argo-cd -n argocd --create-namespace --set installCRDs=true```
+
+We create a special namespace because it is a way to isolate k8s objects from one another. Now, wait like 90 seconds, and then run this command on **Master**:
+
 ```sudo microk8s kubectl get pods -n argocd```
 
-We create a special namespace because it is a way to isolate k8s objects from one another. 
-
-Navigate to the microk8s folder within your local repo and execute this command manually.  In theory you should only have to do this once - the first time you pull the images down onto your nodes:
-
-```sudo microk8s kubectl apply -f argo-cd.yaml```
-
-Wait like 60 seconds and then run a check to ensure you have one pod spun up called backend and one called frontend.  There is no assurance they will be sitting on the same node.  In fact, they probably won't be, which is part of the point of cloud computing!
+It should show a bunch of argocd pods in various states.  Re-run the command a couple of times until all the pods are in a readiness state.  When they eventually all get to ready state, then run:
 
 ```sudo microk8s kubectl get pods -n microk8s-tutorial -o wide```
 
 You should hopefully see something like this:
 
 |NAME|READY|STATUS|RESTARTS|AGE|IP|NODE|
-|------------------|--------|---------|------|-----|---|----|
+|------------------|---|---------|------|-----|---|----|
 |backend-123456-abc|1/1|Running|0|4d21h|10.1.100.200|master|
 |frontend-1234-123|1/1|Running|0|4d21h|10.1.101.220|servant|
+
+If NOT, then navigate to the microk8s folder within your local repo and execute this command manually.  In theory you should only have to do this once - the first time you pull the images down onto your nodes:
+
+```sudo microk8s kubectl apply -f argo-cd.yaml```
+
+Wait like 60 seconds and then run a check to ensure you have one pod spun up called backend and one called frontend.  There is no assurance they will be sitting on the same node.  In fact, they probably won't be, which is part of the point of cloud computing!
 
 Now, if our ngnix ingress controller bound the frontend service to your LAN appropriately, you should, in theory at this point be able to get on any device that is also hooked up to your LAN and then type 1.192.168.1.10 (or .11 or .12 or .13) into your borwser and see Hello World! rendered in your browser.  If not, you need to debug, focus specifically on the daemonset in the ingress namespace.
 
