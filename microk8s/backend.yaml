@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backend
-  namespace: test-my-cluster-site
+  namespace: microk8s-tutorial
 spec:
   replicas: 1
   selector:
@@ -31,7 +31,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: backend-service
-  namespace: test-my-cluster-site
+  namespace: microk8s-tutorial
 spec:
   selector:
     app: backend
