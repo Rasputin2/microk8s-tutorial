@@ -4,9 +4,10 @@
 - [File_Structure](#file_structure)
 - [Definitions](#definitions)
 - [Local_Development](#local_development)
+- [Shutting_Down_for_the_Day](#shutting_down_for_the_day)
 - [Deployment](#deployment)
-- [Networking](#networking)
-- [Starting_Over](#starting_over)
+- [Appendix_A:_Networking_On_the_LAN](#appendix_a:_networking_on_the_lan)
+- [Appendix_D:Starting_Over](#starting_over)
 
 
 # Intro
@@ -171,6 +172,21 @@ You must start the docker daemon (you can typically just click on the Docker Des
 OR
 
 ```docker compose up --build --force-recreate``` if you change the image
+
+
+# Shutting_Down_for_the_Day
+
+Before you proceed, understand that you will want to pause and take a break.  You likely won't want to do everything in one sitting.  That is perfectly fine.  However, you don't just want to shut off your Raspberry Pis without properly pausing your microk8s cluster before you do. So, to safely pause the cluster, do this:
+
+```sudo microk8s stop```
+
+Then wait a couple of seconds, and then check the status to ensure it stopped.
+
+```sudo microk8s status```
+
+Then, if the cluster has stopped, you can power down the Raspberry Pis.  Then, when you return the next day, and you power on the Pis, you can start the cluster again:
+
+```sudo microk8s start```
 
 # Deployment
 
@@ -464,15 +480,45 @@ If NOT, then navigate to the microk8s folder within your local repo and execute 
 
 ```sudo microk8s kubectl apply -f argo-cd.yaml```
 
-Wait like 60 seconds and then run a check to ensure you have one pod spun up called backend and one called frontend.  There is no assurance they will be sitting on the same node.  In fact, they probably won't be, which is part of the point of cloud computing!
+Wait like 60 seconds and then run a check to ensure you have one pod spun up called backend and one called frontend.  
+
+```sudo microk8s kubectl get pods -n microk8s-tutorial -o wide```
+
+There is no assurance they will be sitting on the same node.  In fact, they probably won't be, which is part of the point of cloud computing!  Before you check the actual IP addresses we assigned, do some introspection of your cluster. 
 
 Now, if our ngnix ingress controller bound the frontend service to your LAN appropriately, you should, in theory at this point be able to get on any device that is also hooked up to your LAN and then type 1.192.168.1.10 (or .11 or .12 or .13) into your borwser and see Hello World! rendered in your browser.  If not, you need to debug, focus specifically on the daemonset in the ingress namespace.
 
 If you do see the website, congratulations!  We still have not exposed our website to the wider world, but at least its available in your home!
 
-Before we explore how to expose the application on the wider internet, let's pause and take a moment to really dig into how packets move within the LAN.  We address that in the next section. 
+Before we explore how to expose the application on the wider internet, let's pause and take a moment to really dig into how packets move within the LAN.  Go to **Appendix A** to see a picture of what is happening here.
 
-# Networking on the LAN
+# Expose_to_the_Internet
+
+Despite all the work we have done thus far, our website is only available on our local area network.  Only people on our home network can reach our wonderful site.  Nothing is exposed to the wider Internet.
+
+## Acquire a Domain Name
+
+You can, if you want, simply expose an IP Address to the Internet (something like 192.0.2.0) but people will typically want to just type in a name.  That name is your domain name.  Before diving in, a brief word about URIs, URNs and URLs.  We'll be focused on URLs, but its important to know what the others are.
+
+**URI: Uniform Resource Identifier**
+The umbrella term here is URI.  It encompasses both URNs and URLs.  A URI has the same format as a URL (described below) except that its focus is primarily on identification of a resource. It has two child concepts, URN and URL.  
+
+  **URN: Uniform Resource Name**
+  A URN has the format: urn:<NAMESPACE-IDENTIFIER>:<NAMESPACE-SPECIFIC-STRING>.  It is used to identify a resource with a namespace.  A namespace is literally what it means -- a space associated with name.  You want to think of it like a file folder.  If you have a folder marked "Cars" then any resource associated with Cars should be linked with that namespace.  The URN doesn't give any information about where to find the resources though.
+
+  **URL: Uniform Resource Locater**
+  This is the type of URI we are most interested in.  This is what allows someone to actually locate your website. It consists of the following components:
+
+  |protocol|Domain Name                          |Port|Path     |Query String Operator|Parameter   |Fragment   |
+  |--------|-------------------------------------|----|---------|---------------------|------------|-----------|
+  |        |subdomain|domain    |top-level-domain|    |         |                     |            |           |
+  |http:// |www      |catvidsrus|com             |443 |/home    |?                    |ref=123     |#30        |
+
+Of the foregoing elements of a URL, the thing that will cost you some money is the domain (i.e., "catvidsrus").  You can buy a domain from a number of vendors.  You can choose any Top Level Domain but I recommend you choose .org, or .net or .com.  Once you have your domain name you will want to become familiar with how to modify the DNS registration with your registrar (i.e., the vendor who sold it to you).  A little later, you will need to add records to this DNS registration. 
+
+
+
+# Appendix_A:_Networking_on_the_LAN
 
 The following explains the the networking aspects of the project.  I start with your home router's external IP address and then drill down to the k8s cluster and the backend and frontend services.  Before proceeding, recall that what we refer to as the "Internet" consists of a five layers:
 
@@ -521,7 +567,7 @@ Now that the NAT has translated the destination to be 192.168.1.10, the Routing 
 
 ![alt text](pictures/LAN_DIAGRAM.png)
 
-# Starting_Over
+# Appendix_D:_Starting_Over
 
 You may find during this project that something went very wrong or you may just decide to tear everything down at one point and start over just as a learning exercise.  If you do so, it's important to tear things down in the right order.  To shut things down properly:
 
