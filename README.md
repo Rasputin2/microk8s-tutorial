@@ -135,7 +135,7 @@ There are two (2) different ways of running this simple application locally.  Th
 
 #### Backend
 
-In a new terminal within your IDE (but inside your test-my-cluster-site project root) run:
+In a new terminal within your IDE (but inside your microk8s-tutorial project root) run:
 
 ```uv run --package backend uvicorn src.backend.app.main:app --reload```
 
@@ -273,9 +273,9 @@ At the risk of overloading you with information, there are lots of other Object 
 
 Core Workload Objects:
   Pod (mentioned above)
-  Deployment
-  ReplicaSet
-  DaemonSet
+  Deployment - A workflow that spins up one or more pods based on certain considerations
+  ReplicaSet - Keep an identical number of pods running at all times
+  DaemonSet - Ensures a pod is always associated with a node
 
 Networking Objects:
   Service
@@ -363,7 +363,7 @@ On the **Master** install git:
 ```sudo apt update```
 ```sudo apt install git```
 
-Now clone your repo onto **Master**.  You can get the command by going to your remote github repository, clicking the green code button, and seeing the command there.  The method you choose depends on whether you want to use HTTPs (with PAT Token) or SSH with an SSH key.  You need to research that and complete this step on your own.  Whatever method you choose, note "where" in your Ubuntu file system the test-my-cluster-site repo gets cloned into.  Typically you would be in your user home directory (denoted ~).  
+Now clone your repo onto **Master**.  You can get the command by going to your remote github repository, clicking the green code button, and seeing the command there.  The method you choose depends on whether you want to use HTTPs (with PAT Token) or SSH with an SSH key.  You need to research that and complete this step on your own.  Whatever method you choose, note "where" in your Ubuntu file system the microk8s-tutorial repo gets cloned into.  Typically you would be in your user home directory (denoted ~).  
 
 Now, **don't** do this, but I want to point out that you could, if you wanted, on your **Master**, navigate to the microk8s folder, comment out the argocd yaml and run microk8s apply -f .  This should deploy your app to your pre-existing 2 node cluster.  The issue with this is that we don't want to be in a situation where every time we change the application code on whatever laptop we are using for local development, we have to have someone manually get onto our **Master** and trigger a redeployment.  We want it to be automatic!  So, to make it automatic, we have to get into Continuous Deployment (or the CD in CI/CD).
 
@@ -407,11 +407,11 @@ You should (hopefully) see something named containerd running.  Now containerd c
 
 ### Get Gitops to Build the Image and Register the Image with GHCR
 
-If you forked the test-my-cluster-site repo, then you should see this file: .github\workflows\ci.yaml. Now that is the file that lets github know we want to have github actions build our images.  You can verify that this has been recognized in your repo by clicking on the Actions tab in the horizontal navbar.  When you click on it, you should see something like CI\CD on the left vertical side-panel. If it suggests you need to "Enable Actions" then enable it.  You will notice that the ci.yaml contains two variables denoted by the ${{ }} pattern.  All of these variables are automatically supplied by Github which makes life easy.  
+If you forked the microk8s-tutorial repo, then you should see this file: .github\workflows\ci.yaml. Now that is the file that lets github know we want to have github actions build our images.  You can verify that this has been recognized in your repo by clicking on the Actions tab in the horizontal navbar.  When you click on it, you should see something like CI\CD on the left vertical side-panel. If it suggests you need to "Enable Actions" then enable it.  You will notice that the .github/workflows/ci.yaml file contains two variables denoted by the ${{ }} pattern.  All of these variables are automatically supplied by Github which makes life easy.  
 
 You should confirm that a workflow has run and you see a green checkmark.  If not, click New Workflow and just see if Github Actions can build the images.  If it can't you need to debug at this stage.
 
-Assuming you have a green checkmark, the images (backend and frontend) should now be registered with github's container registry or ghcr.  You can confirm by going back to your <> Code repository tab in the horizontal navbar and looking for the Packages window.  Click into that window and confirm that the you have a frontend package and a backend package there. 
+Assuming you have a green checkmark, the images (backend and frontend) should now be "built" and "registered" with github's container registry or ghcr.  You can confirm by going back to your <> Code repository tab in the horizontal navbar and looking for the Packages window.  Click into that window and confirm that the you have a frontend package and a backend package there. 
 
 ### Install ArgoCD to Pull the Images Down onto Your Kubernetes Cluster
 
@@ -431,7 +431,7 @@ Navigate to the microk8s folder within your local repo and execute this command 
 
 Wait like 60 seconds and then run a check to ensure you have one pod spun up called backend and one called frontend.  There is no assurance they will be sitting on the same node.  In fact, they probably won't be, which is part of the point of cloud computing!
 
-```sudo microk8s kubectl get pods -n test-my-cluster-site -o wide```
+```sudo microk8s kubectl get pods -n microk8s-tutorial -o wide```
 
 You should hopefully see something like this:
 

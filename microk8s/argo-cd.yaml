@@ -1,20 +1,20 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: test-my-cluster-site
+  name: microk8s-tutorial
   namespace: argocd
 
 spec:
   project: default
 
   source:
-    repoURL: https://github.com/rasputin2/test-my-cluster-site.git
+    repoURL: https://github.com/rasputin2/microk8s-tutorial.git
     targetRevision: main
     path: microk8s
 
   destination:
     server: https://kubernetes.default.svc
-    namespace: test-my-cluster-site
+    namespace: microk8s-tutorial
 
   syncPolicy:
     automated:
