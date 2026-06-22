@@ -6,8 +6,8 @@
 - [Local_Development](#local_development)
 - [Shutting_Down_for_the_Day](#shutting_down_for_the_day)
 - [Deployment](#deployment)
-- [Appendix_A:_Networking_on_the_LAN](#appendix_a:_networking_on_the_lan)
-- [Appendix_D:_Starting_Over](#starting_over)
+- [Appendix_A:_Networking_on_the_LAN](#appendix-a-networking-on-the-lan)
+- [Appendix_D:_Starting_Over](#starting-over)
 
 
 # Intro
