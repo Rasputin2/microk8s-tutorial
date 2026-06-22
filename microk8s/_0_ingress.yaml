@@ -15,10 +15,3 @@ spec:
                 name: frontend-service
                 port:
                   number: 80
-          - path: /microk8s
-            pathType: Prefix
-            backend:  
-              service:
-                name: frontend-service
-                port:
-                  number: 80
