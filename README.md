@@ -6,8 +6,8 @@
 - [Local_Development](#local_development)
 - [Shutting_Down_for_the_Day](#shutting_down_for_the_day)
 - [Deployment](#deployment)
-- [Appendix_A:_Networking_On_the_LAN](#appendix_a:_networking_on_the_lan)
-- [Appendix_D:Starting_Over](#starting_over)
+- [Appendix_A:_Networking_on_the_LAN](#appendix_a:_networking_on_the_lan)
+- [Appendix_D:_Starting_Over](#starting_over)
 
 
 # Intro
@@ -516,7 +516,71 @@ The umbrella term here is URI.  It encompasses both URNs and URLs.  A URI has th
 
 Of the foregoing elements of a URL, the thing that will cost you some money is the domain (i.e., "catvidsrus").  You can buy a domain from a number of vendors.  You can choose any Top Level Domain but I recommend you choose .org, or .net or .com.  Once you have your domain name you will want to become familiar with how to modify the DNS registration with your registrar (i.e., the vendor who sold it to you).  A little later, you will need to add records to this DNS registration. 
 
+# Expose the Website Externally
 
+As the previous section noted, the website is only available on our LAN at this point, which is not very useful.  In this section we'll expose it to the Internet.  
+
+## Disclaimer: What You Shouldn't Do
+
+Currently, our NGNIX ingress is listening on port 80, which is a port dedicated to listening to inbound unecrypted traffic.  Simply opening port 80 on our router wouldn't be a good idea.  You could do it if you wanted, and it vastly simplify things, but it's not a great idea because it allows literally any bad actor in the world to find your local network and start sending you bits, which you don't want.  
+
+Instead, we will create an encrypted outbound only tunnel between our ingress service and the outside world. The tunnel solves a number of problems that would take a fair bit of time to solve -- and given that this is a tutorial on k8s and not network security -- this is the route we chose. 
+
+There are different ways to do this, but we chose Cloudflare, because that is where we purchased the domain name.  You don't have to do the same thing, but the references below relate to Cloudflare.  To the extent the service you use is different you will have to read the docs and configure accordingly.  
+
+If you are interested in the things we are glossing over because we have a tunnel, consider these.  First, since a tunnel doesn't require you to open your ports on your home's router, you don't have to worry about what rights you do or don't have on the router granted by your ISP.  Second, given that it is configured to be "outbound only" what happens is that a daemon running on your PIs will constantly ping Cloudflare (which sits between your router and the Internet) and all public traffic will only see Cloudflare.  It's like you checking a Post Office box every second of every day for mail coming in to the post office box.  You get the messages, but nobody knows your home address.  Third, you don't have to create and manage a TLS certificate.  
+
+## Create a Cloudflare Network Tunnel
+
+Assuming you are using Cloudflare, you need to go on to their website, create an account, and choose a plan. Navigate to "Zero Trust" and choose a plan.  You can choose the free plan.  It is more than ample for any hobby or even small business website.  Once you have a plan, you can click on "Network" and then scroll down and choose "Tunnel".  Then click on the button to create a new tunnel.  
+
+- Give it a distinctive name. 
+- Save a copy of the install and run commands in some secure location.
+- You need to copy and run the command line scripts for debian 64bit (if you are using Raspberry Pi with Ubuntu) to install cloudflared on your **Master**. 
+
+Once you've installed the cloudflared daemon on your **Master** you can run some command line commands to check the status:
+
+```cloudflared tunnel list```
+```cloudflared tunnel info mytunnel```
+```cloudflared tunnel route dns```
+```sudo systemctl status cloudflared```
+
+Once you are sure the cloudflared daemon is running on your **Master** then you need to: (i) add subdomains, domains and routes; and (ii) add a "route" to your tunnel.  
+
+In terms of the subdomain and domain, that is up to you, but if you want to be consistent with this tutorial, you should add a path called /microk8s.  So, assume you acquired a domain like "mysite" in the top-level domain "net" and you add a subdomain like "tutorials", your address will look something like this:
+
+```tutorials.mysite.net/microk8s```
+
+The route chosen should be associated with a "published application" and the "Source Address" should be the static IP address and port associated with your **Master**, which (if you chose the same address shown above) should be 192.168.1.10:80.  You may wonder how this works because this address is on your LAN and not the router and exposed to the Internet.  But that is the beauty of the tunnel is that you don't have to expose your router to inbound traffic at all.  Instead, the cloudflared daemon initiates a connection to Cloudflare.
+
+Now, this will not work yet, because if you remember, our ingress.yaml listens for http: requests on port 80 and prefix "/" but now Cloudflare is going to send bits to 192.168.1.10:80 with route "/microk8s" and your ingress controller and ingress service won't know what to do with it.  So to address this without screwing up what we've already done, we need to add a second path to the ingress.yaml like so:
+
+```
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-ingress
+  namespace: microk8s-tutorial
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-service
+                port:
+                  number: 80
+          - path: /microk8s
+            pathType: Prefix
+            backend:  
+              dervice:
+                name: frontend-service
+                port:
+                  number: 80
+```
 
 # Appendix_A:_Networking_on_the_LAN
 
