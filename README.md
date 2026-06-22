@@ -553,34 +553,9 @@ In terms of the subdomain and domain, that is up to you, but if you want to be c
 
 The route chosen should be associated with a "published application" and the "Source Address" should be the static IP address and port associated with your **Master**, which (if you chose the same address shown above) should be 192.168.1.10:80.  You may wonder how this works because this address is on your LAN and not the router and exposed to the Internet.  But that is the beauty of the tunnel is that you don't have to expose your router to inbound traffic at all.  Instead, the cloudflared daemon initiates a connection to Cloudflare.
 
-Now, this will not work yet, because if you remember, our ingress.yaml listens for http: requests on port 80 and prefix "/" but now Cloudflare is going to send bits to 192.168.1.10:80 with route "/microk8s" and your ingress controller and ingress service won't know what to do with it.  So to address this without screwing up what we've already done, we need to add a second path to the ingress.yaml like so:
+Now, this will not work yet, because if you remember, our ingress.yaml listens for http: requests on port 80 and prefix "/" but now Cloudflare is going to send bits to 192.168.1.10:80 with route "/microk8s" and your ingress controller and ingress service won't know what to do with it.  So to address this without screwing up what we've already done, we need to switch out our ingress.yaml.  To do this, replace the contents of the existing ingress.yaml with the contents from _1_ingress.yaml.  
 
-```
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: app-ingress
-  namespace: microk8s-tutorial
-spec:
-  ingressClassName: nginx
-  rules:
-    - http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: frontend-service
-                port:
-                  number: 80
-          - path: /microk8s
-            pathType: Prefix
-            backend:  
-              dervice:
-                name: frontend-service
-                port:
-                  number: 80
-```
+If you push this new change to github remote, you should trigger a new CI/CD cycle. Once the old pods are terminated and the new pods are up, you can test.  The way to test this is to use a cellphone and turn off your wifi and then try to get to the site without using your wifi and LAN. 
 
 # Appendix_A:_Networking_on_the_LAN
 
