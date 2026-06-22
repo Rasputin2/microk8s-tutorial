@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: ghcr.io/rasputin2/backend:eeba180c33c282ea8f932103b5a7c5b85e05ec75
+          image: ghcr.io/rasputin2/backend:081ccf7d99ba768168c807df897ebe33fb121514
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
