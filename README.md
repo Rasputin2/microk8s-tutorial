@@ -7,12 +7,15 @@
 - [Shutting_Down_for_the_Day](#shutting_down_for_the_day)
 - [Deployment](#deployment)
 - [Appendix_A:_Networking_on_the_LAN](#appendix-a-networking-on-the-lan)
+- [Appendix_B:_Scale_Out_Experiment](#appendix-b-scale-out-experiment)
 - [Appendix_D:_Starting_Over](#starting-over)
 
 
 # Intro
 
-The purpose of this project is to use raspberry pis to demonstrate the basic principles of networking and cloud computing.  To that end, the actual application is very basic.  It's sole function is to illustrate key concepts and I keep it simple so the details of application programming do not interfere with the cloud and networking elements.  References to layers are to the layers used on the Internet and not the 7 layer theoretical model from the Open Systems Interconnection (OSI) model. The layers are:
+The purpose of this project is to use raspberry pis to demonstrate the basic principles of networking and cloud computing.  To that end, the actual application is very basic.  It's sole function is to illustrate key concepts and I keep it simple so the details of application programming do not interfere with the cloud and networking elements.  
+
+References to network layers are to the layers used on the Internet and not the 7 layer theoretical model from the Open Systems Interconnection (OSI) model. The layers are:
 
 Layer 5: Application Layer (Data)
 Layer 4: Transport Layer ("Segment" over TCP / "Datagram" over UDP)
@@ -24,6 +27,8 @@ So if I refer to Link layer you know what I mean. Attached below are diagrams de
 
 ![alt](pictures/DATAFRAME_DIAGRAM.png)
 ![alt text](pictures/PACKET_DIAGRAM.png)
+
+If you cloned this repo, and you see some files contain code that is entirely commented out, that is on purpose.  When we get to the appropriate step, I'll ask you to uncomment out the code.  Before that step the code will not run.  
 
 # File_Structure
 
@@ -516,6 +521,7 @@ The umbrella term here is URI.  It encompasses both URNs and URLs.  A URI has th
 
 Of the foregoing elements of a URL, the thing that will cost you some money is the domain (i.e., "catvidsrus").  You can buy a domain from a number of vendors.  You can choose any Top Level Domain but I recommend you choose .org, or .net or .com.  Once you have your domain name you will want to become familiar with how to modify the DNS registration with your registrar (i.e., the vendor who sold it to you).  A little later, you will need to add records to this DNS registration. 
 
+
 # Expose the Website Externally
 
 As the previous section noted, the website is only available on our LAN at this point, which is not very useful.  In this section we'll expose it to the Internet.  
@@ -545,7 +551,7 @@ Once you've installed the cloudflared daemon on your **Master** you can run some
 ```cloudflared tunnel route dns```
 ```sudo systemctl status cloudflared```
 
-Once you are sure the cloudflared daemon is running on your **Master** then you need to: (i) add subdomains, domains and routes; and (ii) add a "route" to your tunnel.  
+Once you are sure the cloudflared daemon is running on your **Master** then you need to: (i) add subdomains, domains and routes; and (ii) add a "route" to your tunnel.  This is all detailed in the Cloudflare documentation.  
 
 In terms of the subdomain and domain, that is up to you, but if you want to be consistent with this tutorial, you should add a path called /microk8s.  So, assume you acquired a domain like "mysite" in the top-level domain "net" and you add a subdomain like "tutorials", your address will look something like this:
 
@@ -556,6 +562,36 @@ The route chosen should be associated with a "published application" and the "So
 Now, this will not work yet, because if you remember, our ingress.yaml listens for http: requests on port 80 and prefix "/" but now Cloudflare is going to send bits to 192.168.1.10:80 with route "/microk8s" and your ingress controller and ingress service won't know what to do with it.  So to address this without screwing up what we've already done, we need to switch out our ingress.yaml.  To do this, replace the contents of the existing ingress.yaml with the contents from _1_ingress.yaml.  
 
 If you push this new change to github remote, you should trigger a new CI/CD cycle. Once the old pods are terminated and the new pods are up, you can test.  The way to test this is to use a cellphone and turn off your wifi and then try to get to the site without using your wifi and LAN. 
+
+# Scaling Up vs. Scaling Out
+
+So, hopefully now you have a working website that is exposed on the internet.  But even with all this work, you haven't really seen the benefit of what the cloud can offer.  This is where we want to discuss scaling up vs. scaling out, and then we'll run an experiment, which is detailed in **Appendix B**. 
+
+Remember that each discrete component of our app is running in a separate container within a pod.  The pod is a compute resource, but it is an abstraction.  It only gets a "piece" of the hardware's computing power.  Determining how much it should get is known as scaling up/down.  Even if our pod/container has sufficient resources to handle "a" task, what happens if we have 1,000 users hit our site at once and our pod can't handle it?  That is where scaling out comes in.  
+
+To do that, we need to add autoscaling into our deployment.  To do that follow these steps:
+
+*Step 1:* Enable microk8s metrics
+
+```sudo microk8s enable metrics-server```
+
+*Step 2:* Verify by Checking Nodes and Pods
+
+```sudo microk8s kubectl -n microk8s-tutorial top nodes```
+```sudo microk8s kubectl -n microk8s-tutorial top pods```
+
+*Step 3:* Uncomment the Deployment Manifests in backend.yaml and frontend.yaml
+
+You should see a block of text in each manifest creating a HorizontalPodAutoscaler.  It is commented out.  Uncomment it.  Then commit the change to your main branch and trigger a new deployment.  If you look at the yaml it specifies a small portion of CPU and memory for each pod and specifies that scale out should occur when they reach 50% capacity. 
+
+To see this in action check out Appendix B where we use a script on a separate machine that is not on our LAN to simulate hundreds of hits on our site so you can see the scale out. 
+
+# Authentication vs. Authorization
+
+
+# Session Management
+
+
 
 # Appendix_A:_Networking_on_the_LAN
 
@@ -605,6 +641,105 @@ Now that the NAT has translated the destination to be 192.168.1.10, the Routing 
 ### Getting from the LAN to a Pod on the Cluster
 
 ![alt text](pictures/LAN_DIAGRAM.png)
+
+# Appendix_B:_Scale_Out_Experiment
+
+Make sure you read through all the steps before you start this experiment, because you need to switch between multiple machines.  
+
+## Make Sure your Cluster is On and in a Ready State
+
+Check that your cluster is on (or if its not on, start it using ```sudo microk8s start```). Check that you have two healthy nodes operating (```sudo microk8s kubectl get nodes```).  
+
+## Check the Site
+
+On a completely different machine, like a PC, use incognito mode in your browser and try out your domain name which should be something like:
+
+```tutorials.mysite.net/microk8s```
+
+You should be able to see our Hello World app without any warning about the connection being insecure.  What's happening is your PC is sending bits out of your LAN through your router to the Internet, which get routed to Cloudflare and then your Pis and Cloudflare communicate behind the scenese.  Cloudflare takes care of the TLS encryption. 
+
+Then, open a new tab and type **Master's** static IP address, which, if you copied me, should be 192.168.1.10.  Now, you should see the app again, but this time you should get a warning that the connection is insecure.  This is because you are not hitting cloudflare's tunnel now.  Instead, you are just hitting a specific IP address on your LAN and we never set up TLS encryption for it.
+
+## Simulate Traffic
+
+To simulate traffic, we need to be on a machine like a PC that either has the Linux operating system or has the ability to run a Linux bash script.  For example, one of my PC's uses windows.  So to use Linux, I'll first install windows subsystem for linux as follows:
+
+```wsl --status``` to confirm that it is not already installed
+
+```wsl --install``` to install it if it is not
+
+If you don't know anything about Linux, how to create a file and run a bash script, you need to brush up on that topic now before proceeding. These commands need to be run in your Linux terminal in your PC:
+
+```vi simulation_script.sh``` # I am using the default vi editor you can use nano or some other editor 
+
+Then cut and paste this script (but make sure to change the app.example.com to your proper hostname and path (\microk8s) - like: ```tutorials.yourdomain.net\microk8s```):
+
+```
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+URL="${1:-https://app.example.com}"
+CONCURRENCY="${2:-50}"
+REQUESTS_PER_WORKER="${3:-200}"
+SLEEP_BETWEEN_BATCHES="${4:-1}"
+
+echo "Target URL: $URL"
+echo "Concurrency: $CONCURRENCY"
+echo "Requests per worker: $REQUESTS_PER_WORKER"
+echo "Sleep between batches: ${SLEEP_BETWEEN_BATCHES}s"
+echo
+
+start_time=$(date +%s)
+
+worker() {
+  local worker_id="$1"
+
+  for i in $(seq 1 "$REQUESTS_PER_WORKER"); do
+    status_code=$(curl -k -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
+
+    if [[ "$status_code" != "200" ]]; then
+      echo "Worker $worker_id request $i returned HTTP $status_code"
+    fi
+  done
+}
+
+batch=1
+
+while true; do
+  echo "Starting batch $batch..."
+
+  for worker_id in $(seq 1 "$CONCURRENCY"); do
+    worker "$worker_id" &
+  done
+
+  wait
+
+  elapsed=$(( $(date +%s) - start_time ))
+  echo "Completed batch $batch after ${elapsed}s"
+  echo
+
+  batch=$((batch + 1))
+  sleep "$SLEEP_BETWEEN_BATCHES"
+done
+```
+
+Then save the file and take note of where the file is located and make sure you navigate to the folder where that file is.  Then run this command on your computer:
+
+```chmod +x simulation_script.sh``` # Enables you to execute the script
+
+Now, this is where things get a little tricky.  Run this command on your **Master**:
+
+```microk8s kubectl -n microk8s-tutorial get pods -w```
+
+This should display two nodes - one frontend and one backend but it should also hang, waiting, and not complete. 
+
+Now you can go back to your PC (while keeping an eye on your Pi) and execute the script (but make sure to change the domain name below):
+
+```./simulation_script.sh https://app.example.com 5 50 1```
+
+This script should simulate 5 individuals each of whom pings your site 50 times.  
+
 
 # Appendix_D:_Starting_Over
 
