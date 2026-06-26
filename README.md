@@ -13,7 +13,9 @@
 
 # Intro
 
-The purpose of this project is to use raspberry pis to demonstrate the basic principles of networking and cloud computing.  To that end, the actual application is very basic.  It's sole function is to illustrate key concepts and I keep it simple so the details of application programming do not interfere with the cloud and networking elements.  References to layers are to the layers used on the Internet and not the 7 layer theoretical model from the Open Systems Interconnection (OSI) model. The layers are:
+The purpose of this project is to use raspberry pis to demonstrate the basic principles of networking and cloud computing.  To that end, the actual application is very basic.  It's sole function is to illustrate key concepts and I keep it simple so the details of application programming do not interfere with the cloud and networking elements.  
+
+References to network layers are to the layers used on the Internet and not the 7 layer theoretical model from the Open Systems Interconnection (OSI) model. The layers are:
 
 Layer 5: Application Layer (Data)
 Layer 4: Transport Layer ("Segment" over TCP / "Datagram" over UDP)
@@ -25,6 +27,8 @@ So if I refer to Link layer you know what I mean. Attached below are diagrams de
 
 ![alt](pictures/DATAFRAME_DIAGRAM.png)
 ![alt text](pictures/PACKET_DIAGRAM.png)
+
+If you cloned this repo, and you see some files contain code that is entirely commented out, that is on purpose.  When we get to the appropriate step, I'll ask you to uncomment out the code.  Before that step the code will not run.  
 
 # File_Structure
 
@@ -559,14 +563,28 @@ Now, this will not work yet, because if you remember, our ingress.yaml listens f
 
 If you push this new change to github remote, you should trigger a new CI/CD cycle. Once the old pods are terminated and the new pods are up, you can test.  The way to test this is to use a cellphone and turn off your wifi and then try to get to the site without using your wifi and LAN. 
 
-
 # Scaling Up vs. Scaling Out
 
-So, hopefully now you have a working website that is exposed on the internet.  But even with all this work, you haven't really seen the benefit of what the cloud can offer.  This is where we want to discuss scaling up vs. scaling out, and then we'll run an experiment, which is detailed in Appendix B. 
+So, hopefully now you have a working website that is exposed on the internet.  But even with all this work, you haven't really seen the benefit of what the cloud can offer.  This is where we want to discuss scaling up vs. scaling out, and then we'll run an experiment, which is detailed in **Appendix B**. 
 
-Remember that each discrete component of our app is running in a separate container within a pod.  The pod is a compute resource, but it is an abstraction.  It only gets a "piece" of the hardware's computing power.  Determining how much it should get is known as scaling up/down.  We won't really deal with that issue because our app is really simple and so compute power is not a concern.
+Remember that each discrete component of our app is running in a separate container within a pod.  The pod is a compute resource, but it is an abstraction.  It only gets a "piece" of the hardware's computing power.  Determining how much it should get is known as scaling up/down.  Even if our pod/container has sufficient resources to handle "a" task, what happens if we have 1,000 users hit our site at once and our pod can't handle it?  That is where scaling out comes in.  
 
-Even if our pod/container has sufficient resources to handle "a" task, what happens if we have 1,000 users hit our site at once?  For that we need to address scale out.  One of the huge advantages of kubernetes is that it, on its own, can handle scale out.  To see this in action check out Appendix B where we use a script on a separate machine that is not on our LAN to simulate hundreds of hits on our site so you can see the scale out. 
+To do that, we need to add autoscaling into our deployment.  To do that follow these steps:
+
+*Step 1:* Enable microk8s metrics
+
+```sudo microk8s enable metrics-server```
+
+*Step 2:* Verify by Checking Nodes and Pods
+
+```sudo microk8s kubectl -n microk8s-tutorial top nodes```
+```sudo microk8s kubectl -n microk8s-tutorial top pods```
+
+*Step 3:* Uncomment the Deployment Manifests in backend.yaml and frontend.yaml
+
+You should see a block of text in each manifest creating a HorizontalPodAutoscaler.  It is commented out.  Uncomment it.  Then commit the change to your main branch and trigger a new deployment.  If you look at the yaml it specifies a small portion of CPU and memory for each pod and specifies that scale out should occur when they reach 50% capacity. 
+
+To see this in action check out Appendix B where we use a script on a separate machine that is not on our LAN to simulate hundreds of hits on our site so you can see the scale out. 
 
 # Authentication vs. Authorization
 
@@ -654,7 +672,7 @@ If you don't know anything about Linux, how to create a file and run a bash scri
 
 ```vi simulation_script.sh``` # I am using the default vi editor you can use nano or some other editor 
 
-Then cut and paste this script (but make sure to change the app.example.com to your proper hostname):
+Then cut and paste this script (but make sure to change the app.example.com to your proper hostname and path (\microk8s) - like: ```tutorials.yourdomain.net\microk8s```):
 
 ```
 #!/usr/bin/env bash
